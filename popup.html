@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Event Extractor</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div id="main">
+      <h1>Event Extractor</h1>
+
+      <div class="controls">
+        <button id="extractBtn">Extract Event Data</button>
+
+        <div class="toggle-container">
+          <label class="toggle-label">
+            <input type="checkbox" id="autoExtractToggle" />
+            <span class="toggle-text">Auto-extract on page load</span>
+          </label>
+        </div>
+      </div>
+
+      <div id="loadingMessage" style="display: none">Processing...</div>
+      <div id="errorMessage" style="display: none"></div>
+      <form id="eventForm" style="display: none">
+        <div class="form-group">
+          <label for="title">Title:</label>
+          <input type="text" id="title" name="title" />
+        </div>
+        <div class="form-group">
+          <label for="provider">Provider:</label>
+          <input type="text" id="provider" name="provider" />
+        </div>
+        <div class="form-group">
+          <label for="summary">Summary:</label>
+          <textarea id="summary" name="summary"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="priceAmount">Price Amount:</label>
+          <input type="number" id="priceAmount" name="priceAmount" />
+        </div>
+        <div class="form-group">
+          <label for="activeTimeRangeLower">Start Time:</label>
+          <input
+            type="datetime-local"
+            id="activeTimeRangeLower"
+            name="activeTimeRangeLower"
+          />
+        </div>
+        <div class="form-group">
+          <label for="activeTimeRangeUpper">End Time:</label>
+          <input
+            type="datetime-local"
+            id="activeTimeRangeUpper"
+            name="activeTimeRangeUpper"
+          />
+        </div>
+        <div class="form-group">
+          <label for="description">Description:</label>
+          <textarea id="description" name="description"></textarea>
+        </div>
+        <input type="hidden" id="id" name="id" />
+        <button type="submit" id="submitBtn">Update Event</button>
+      </form>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

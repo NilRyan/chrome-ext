@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Event Extractor",
+  "version": "1.0",
+  "description": "Extracts event information from webpages and allows editing",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "512": "icons/icon.png"
+    }
+  },
+  "icons": {
+    "512": "icons/icon.png"
+  }
+}
