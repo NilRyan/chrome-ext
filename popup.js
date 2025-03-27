@@ -5,8 +5,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const errorMessage = document.getElementById("errorMessage");
   const autoExtractToggle = document.getElementById("autoExtractToggle");
 
-  const ENDPOINT_URL =
-    "https://67e13a6b58cc6bf78524e238.mockapi.io/api/v1/Event";
+  const ENDPOINT_URL = "http://localhost:3000/graphql";
 
   // Load saved toggle state
   const { autoExtract = false } = await chrome.storage.sync.get("autoExtract");
@@ -45,15 +44,40 @@ document.addEventListener("DOMContentLoaded", async () => {
         function: () => document.documentElement.outerHTML,
       });
 
-      // Send HTML to endpoint
+      // GraphQL mutation for creating/updating event
+      const createEventMutation = `
+        mutation CreateEvent($input: EventInput!) {
+          createEvent(input: $input) {
+            id
+            title
+            provider
+            activeTimeRange {
+              lower
+              upper
+            }
+            summary
+            priceAmount
+            description
+            rawHtml
+            url
+          }
+        }
+      `;
+
+      // Send GraphQL request to endpoint
       const response = await fetch(ENDPOINT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          rawHtml: htmlContent.substr(0, 200),
-          url: tab.url,
+          query: createEventMutation,
+          variables: {
+            input: {
+              rawHtml: htmlContent,
+              url: tab.url,
+            },
+          },
         }),
       });
 
@@ -61,7 +85,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         throw new Error(`Server responded with status: ${response.status}`);
       }
 
-      const eventData = await response.json();
+      const result = await response.json();
+
+      // Check for GraphQL errors
+      if (result.errors && result.errors.length > 0) {
+        throw new Error(result.errors[0].message);
+      }
+
+      const eventData = result.data?.createEvent;
 
       // Check if event data was found
       if (!eventData || !eventData.id) {
@@ -133,29 +164,69 @@ document.addEventListener("DOMContentLoaded", async () => {
         provider: document.getElementById("provider").value,
         summary: document.getElementById("summary").value,
         priceAmount: Number(document.getElementById("priceAmount").value),
-        activeTimeRangeLower: dateToUnixTimestamp(
+        activeTimeRangeLower: localDatetimeToISOString(
           document.getElementById("activeTimeRangeLower").value
         ),
-        activeTimeRangeUpper: dateToUnixTimestamp(
+        activeTimeRangeUpper: localDatetimeToISOString(
           document.getElementById("activeTimeRangeUpper").value
         ),
         description: document.getElementById("description").value,
       };
 
-      // Send updated data to endpoint
+      // Add ID if it exists (for updates)
+      const eventId = document.getElementById("id").value;
+      if (eventId) {
+        formData.id = eventId;
+      }
+
+      // GraphQL mutation for creating/updating event
+      const createEventMutation = `
+        mutation CreateEvent($input: EventInput!) {
+          createEvent(event: $input) {
+            id
+            title
+            provider
+            summary
+            priceAmount
+            activeTimeRange {
+              upper
+              lower
+            }
+            description
+            rawHtml
+            url
+          }
+        }
+      `;
+
+      // Send GraphQL request to endpoint
       const response = await fetch(ENDPOINT_URL, {
-        method: "PUT",
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          query: createEventMutation,
+          variables: {
+            input: {
+              rawHtml: rawHtml,
+            },
+          },
+        }),
       });
 
       if (!response.ok) {
         throw new Error(`Server responded with status: ${response.status}`);
       }
 
-      const updatedData = await response.json();
+      const result = await response.json();
+
+      // Check for GraphQL errors
+      if (result.errors && result.errors.length > 0) {
+        throw new Error(result.errors[0].message);
+      }
+
+      const updatedData = result.data?.createEvent;
 
       // Update form with response
       populateForm(updatedData);
@@ -164,7 +235,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       loadingMessage.style.display = "none";
 
       // Show success message
-      errorMessage.textContent = "Event updated successfully!";
+      errorMessage.textContent = "Event created successfully!";
       errorMessage.style.backgroundColor = "#e8f5e9";
       errorMessage.style.color = "#2e7d32";
       errorMessage.style.display = "block";
@@ -185,29 +256,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("provider").value = eventData.provider || "";
     document.getElementById("summary").value = eventData.summary || "";
     document.getElementById("priceAmount").value = eventData.priceAmount || "";
-
     // Convert Unix timestamps to datetime-local format
-    if (eventData.activeTimeRangeLower) {
+    if (eventData.activeTimeRange?.lower) {
       document.getElementById("activeTimeRangeLower").value =
-        unixTimestampToDatetimeLocal(eventData.activeTimeRangeLower);
+        isoStringToDatetimeLocal(eventData.activeTimeRange.lower);
     }
 
-    if (eventData.activeTimeRangeUpper) {
+    if (eventData.activeTimeRange?.upper) {
       document.getElementById("activeTimeRangeUpper").value =
-        unixTimestampToDatetimeLocal(eventData.activeTimeRangeUpper);
+        isoStringToDatetimeLocal(eventData.activeTimeRange.upper);
     }
 
     document.getElementById("description").value = eventData.description || "";
     document.getElementById("id").value = eventData.id || "";
   }
 
-  function unixTimestampToDatetimeLocal(timestamp) {
-    const date = new Date(timestamp * 1000);
+  function isoStringToDatetimeLocal(serverIsoString) {
+    const date = new Date(serverIsoString);
     return date.toISOString().slice(0, 16);
   }
 
-  function dateToUnixTimestamp(datetimeLocal) {
-    if (!datetimeLocal) return null;
-    return Math.floor(new Date(datetimeLocal).getTime() / 1000);
+  function localDatetimeToISOString(datetimeLocal) {
+    // Create a Date object from the local datetime value
+    const date = new Date(localDatetimeValue);
+
+    // Convert to ISO string (this automatically converts to UTC)
+    return date.toISOString();
   }
 });
